@@ -1,0 +1,187 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// MODÈLES DE DONNÉES
+// ==========================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?   // Hash bcrypt
+  role          Role      @default(READER)
+  avatar        String?
+  bio           String?
+  
+  // Relations
+  stories       Story[]
+  comments      Comment[]
+  bookmarks     Bookmark[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([email])
+}
+
+enum Role {
+  READER
+  AUTHOR
+  ADMIN
+}
+
+model Story {
+  id            String      @id @default(cuid())
+  title         String
+  slug          String      @unique
+  coverImage    String?
+  summary       String?     @db.Text
+  tags          String[]
+  status        StoryStatus @default(DRAFT)
+  
+  // Relations
+  authorId      String
+  author        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  chapters      Chapter[]
+  mediaLibrary  Media[]
+  comments      Comment[]
+  bookmarks     Bookmark[]
+  
+  // Métadonnées
+  viewCount     Int         @default(0)
+  wordCount     Int         @default(0)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  publishedAt   DateTime?
+  
+  @@index([authorId])
+  @@index([slug])
+  @@index([status])
+}
+
+enum StoryStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Chapter {
+  id            String    @id @default(cuid())
+  title         String
+  order         Int
+  content       Json      // Format JSON Tiptap
+  status        ChapterStatus @default(DRAFT)
+  
+  // Relations
+  storyId       String
+  story         Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  versions      ChapterVersion[]
+  comments      Comment[]
+  
+  // Métadonnées
+  wordCount     Int       @default(0)
+  readingTime   Int       @default(0) // En minutes
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  publishedAt   DateTime?
+  
+  @@unique([storyId, order])
+  @@index([storyId])
+}
+
+enum ChapterStatus {
+  DRAFT
+  PUBLISHED
+}
+
+// Système de versioning
+model ChapterVersion {
+  id            String    @id @default(cuid())
+  content       Json      // Snapshot du contenu
+  chapterId     String
+  chapter       Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([chapterId])
+}
+
+// Bibliothèque de médias
+model Media {
+  id            String    @id @default(cuid())
+  filename      String
+  originalName  String
+  url           String    // URL Cloudflare R2
+  type          MediaType
+  size          Int       // En bytes
+  mimeType      String
+  width         Int?      // Pour images
+  height        Int?      // Pour images
+  duration      Int?      // Pour audio/vidéo (en secondes)
+  
+  // Relations
+  storyId       String
+  story         Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([storyId])
+  @@index([type])
+}
+
+enum MediaType {
+  IMAGE
+  AUDIO
+  VIDEO
+}
+
+// Système de commentaires
+model Comment {
+  id            String    @id @default(cuid())
+  content       String    @db.Text
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId       String?
+  story         Story?    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  chapterId     String?
+  chapter       Chapter?  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([storyId])
+  @@index([chapterId])
+}
+
+// Système de bookmarks (marque-pages)
+model Bookmark {
+  id            String    @id @default(cuid())
+  position      Int       @default(0) // Position dans le chapitre (en %)
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId       String
+  story         Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@unique([userId, storyId])
+  @@index([userId])
+  @@index([storyId])
+}
