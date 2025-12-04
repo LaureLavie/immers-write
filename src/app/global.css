@@ -1,4 +1,4 @@
-/* src/app/globals.css */
+/* src/app/global.css */
 
 @tailwind base;
 @tailwind components;
@@ -274,4 +274,9 @@
   /* Utilities personnalisées pour assurer l'existence des classes utilisées via @apply */
   .bg-lavender { background-color: #E5E6F1; }
   .bg-porcelain { background-color: #FDFAF5; }
+
+  /* Animations utilitaires (utilisées via @apply) */
+  .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+  .animate-slide-up { animation: slideUp 0.3s ease-out; }
+  .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 }

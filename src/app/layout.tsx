@@ -7,7 +7,7 @@ import {
   Merriweather, 
   Merriweather_Sans 
 } from 'next/font/google';
-import './globals.css';
+import './global.css';
 
 // Configuration des polices Google Fonts
 const cinzel = Cinzel({
